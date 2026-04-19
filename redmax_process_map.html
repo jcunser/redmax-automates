@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Redmax Events — Process Map (v1)</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #181b23;
+    --panel-2: #1f232d;
+    --line: #2a2f3a;
+    --ink: #e6e9ef;
+    --ink-dim: #9aa3b2;
+    --accent: #e63946;
+    --pre: #f4a261;
+    --del: #4cc9b0;
+    --int: #9c89ff;
+    --red-flag: #ff5d6c;
+    --orange-flag: #ffb020;
+    --block-flag: #ff3b30;
+    --chip-bg: #232834;
+    --chip-bd: #343b49;
+    --ok: #3fb984;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.45;
+    font-size: 14px;
+  }
+  header.top {
+    padding: 40px 48px 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: .3px; }
+  .sub { color: var(--ink-dim); font-size: 14px; }
+  .wrap { padding: 24px 48px 80px; max-width: 1400px; margin: 0 auto; }
+
+  /* Legend */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 20px 28px;
+    padding: 16px 20px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin: 16px 0 28px;
+  }
+  .legend .item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-dim); }
+  .dot { display:inline-block; width:10px; height:10px; border-radius: 50%; }
+  .dot.red { background: var(--red-flag); }
+  .dot.orange { background: var(--orange-flag); }
+  .dot.block { background: var(--block-flag); border-radius: 2px; }
+  .dot.pre { background: var(--pre); }
+  .dot.del { background: var(--del); }
+  .dot.int { background: var(--int); }
+
+  /* Summary boxes */
+  .summary {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px;
+  }
+  .summary .box {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .summary h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--ink-dim); }
+  .summary .big { font-size: 22px; font-weight: 600; color: var(--ink); }
+  .summary .small { color: var(--ink-dim); font-size: 12px; margin-top: 4px; }
+
+  /* Group sections */
+  section.group {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin-bottom: 22px;
+    overflow: hidden;
+  }
+  .group-head {
+    padding: 16px 22px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid transparent;
+    user-select: none;
+  }
+  .group.open .group-head { border-bottom: 1px solid var(--line); }
+  .group-head h2 { margin: 0; font-size: 18px; letter-spacing: .25px; display: flex; align-items:center; gap: 12px; }
+  .group-head .tag {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .14em;
+    padding: 3px 8px; border-radius: 4px;
+    background: var(--chip-bg); color: var(--ink-dim);
+  }
+  .group.pre h2 .bar { background: var(--pre); }
+  .group.del h2 .bar { background: var(--del); }
+  .group.int h2 .bar { background: var(--int); }
+  .bar { width: 4px; height: 22px; border-radius: 2px; display: inline-block; }
+  .caret { color: var(--ink-dim); font-size: 14px; }
+  .group-body { display: none; padding: 10px 22px 22px; }
+  .group.open .group-body { display: block; }
+
+  /* Process cards */
+  .proc {
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px 16px; margin: 12px 0;
+  }
+  .proc-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .proc-num { color: var(--ink-dim); font-variant-numeric: tabular-nums; font-size: 12px; min-width: 28px; }
+  .proc-title { margin: 0; font-size: 15px; font-weight: 600; }
+  .owner {
+    font-size: 11px; padding: 2px 7px; border-radius: 4px;
+    background: var(--chip-bg); color: var(--ink); border: 1px solid var(--chip-bd);
+    text-transform: uppercase; letter-spacing: .1em;
+  }
+  .owner.b { border-color: #6e7c99; color: #b5c1da; }
+  .owner.j { border-color: #9c7bd8; color: #c9b8f0; }
+  .owner.k { border-color: #d89e7b; color: #f0ccb8; }
+  .owner.t { border-color: #7bc9d8; color: #b8e4f0; }
+
+  .severity {
+    font-size: 11px; padding: 2px 7px; border-radius: 4px;
+    background: rgba(255,59,48,0.12); color: var(--red-flag); border: 1px solid rgba(255,59,48,0.3);
+    text-transform: uppercase; letter-spacing: .1em;
+  }
+  .severity.med { background: rgba(255,176,32,0.12); color: var(--orange-flag); border-color: rgba(255,176,32,0.3); }
+  .severity.low { background: rgba(63,185,132,0.12); color: var(--ok); border-color: rgba(63,185,132,0.3); }
+
+  .steps {
+    display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px;
+  }
+  .step {
+    background: #21252f; border: 1px solid var(--chip-bd); border-radius: 6px;
+    padding: 6px 10px; font-size: 12px; display: flex; align-items: center; gap: 8px;
+    max-width: 280px;
+  }
+  .step .n { color: var(--ink-dim); font-variant-numeric: tabular-nums; font-size: 11px; }
+  .step.redundant { border-color: rgba(255,93,108,0.5); background: rgba(255,93,108,0.08); }
+  .step.manual { border-color: rgba(255,176,32,0.45); background: rgba(255,176,32,0.07); }
+  .step.block { border-color: rgba(255,59,48,0.6); background: rgba(255,59,48,0.1); }
+  .flag-inline {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+    padding: 1px 5px; border-radius: 3px;
+    background: rgba(0,0,0,0.2); color: var(--ink-dim);
+  }
+  .step.redundant .flag-inline { background: rgba(255,93,108,0.18); color: var(--red-flag); }
+  .step.manual .flag-inline { background: rgba(255,176,32,0.18); color: var(--orange-flag); }
+  .step.block .flag-inline { background: rgba(255,59,48,0.2); color: var(--red-flag); }
+
+  .notes { font-size: 12px; color: var(--ink-dim); border-left: 2px solid var(--chip-bd); padding: 2px 0 2px 10px; margin-top: 8px; }
+  .notes b { color: var(--ink); font-weight: 600; }
+  .notes .hot { color: var(--red-flag); }
+
+  /* Redundancy table */
+  .redundancy {
+    margin-top: 10px;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px 22px;
+  }
+  .redundancy h3 { margin: 0 0 10px; font-size: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { color: var(--ink-dim); font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: .1em; }
+  td.count { font-variant-numeric: tabular-nums; text-align: right; color: var(--red-flag); font-weight: 600; white-space: nowrap; }
+
+  .footer { color: var(--ink-dim); font-size: 12px; margin-top: 30px; text-align: center; }
+
+  /* Toggle all */
+  .controls { margin-bottom: 10px; }
+  .controls button {
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink-dim);
+    padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: 6px;
+  }
+  .controls button:hover { color: var(--ink); border-color: #3a4050; }
+
+  @media (max-width: 900px) {
+    header.top { padding: 24px 20px; }
+    .wrap { padding: 16px 16px 60px; }
+    .summary { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>Redmax Events — Process Map</h1>
+  <div class="sub">
+    Compiled from interviews with Brandon Havrilla, Jenna Selleck, Keith Pecora, and Tavian Swick &nbsp;·&nbsp;
+    AutoMates &nbsp;·&nbsp; v1 — April 2026 &nbsp;·&nbsp; John (Creative) pending
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="controls">
+    <button onclick="document.querySelectorAll('section.group').forEach(g=>g.classList.add('open'))">Expand all</button>
+    <button onclick="document.querySelectorAll('section.group').forEach(g=>g.classList.remove('open'))">Collapse all</button>
+  </div>
+
+  <!-- ==================== GROUP 1: PRE-SALE ==================== -->
+  <section class="group pre open">
+    <div class="group-head" onclick="this.parentNode.classList.toggle('open')">
+      <h2><span class="bar"></span> Pre-Sale <span class="tag">Lead → Signed invoice</span></h2>
+      <span class="caret">▾</span>
+    </div>
+    <div class="group-body">
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">1.01</span>
+          <h3 class="proc-title">Proactive Business Development / Pitch</h3>
+          <span class="owner b">B</span>
+          <span class="owner j" style="opacity:.4" title="John excluded from v1">+ John (excluded)</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Identify target agency / brand</div>
+          <div class="step manual"><span class="n">2</span> John builds ~2hr custom pitch deck <span class="flag-inline">manual</span></div>
+          <div class="step"><span class="n">3</span> Brandon joins pitch call / presentation</div>
+          <div class="step"><span class="n">4</span> Follow up manually</div>
+        </div>
+        <div class="notes"><b>Issue:</b> Deck built for every cold pitch regardless of prospect interest. No interest filter before the ~2hr investment. Brandon's stated fix: flip to email-first with automated brand research to gauge interest first.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">1.02</span>
+          <h3 class="proc-title">Inbound / New Client Intro Call</h3>
+          <span class="owner b">B</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Receive inquiry (email / referral)</div>
+          <div class="step"><span class="n">2</span> Brandon sits in on initial call</div>
+          <div class="step"><span class="n">3</span> Gather requirements / scope</div>
+          <div class="step"><span class="n">4</span> Hand off to quoting</div>
+        </div>
+        <div class="notes">Brandon personally sits on every new-client or agency intro call. No CRM stage-tracking today — opportunity lives in Brandon's head + email.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">1.03</span>
+          <h3 class="proc-title">Large Quoting ($50K+ — ~80% of projects)</h3>
+          <span class="owner b">B</span>
+          <span class="severity low">Intentionally manual</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Review renders / scope / dimensions</div>
+          <div class="step manual"><span class="n">2</span> Count plywood sheets × ~$250 incl. 2 waste <span class="flag-inline">gut</span></div>
+          <div class="step manual"><span class="n">3</span> Add paint + labor from memory <span class="flag-inline">gut</span></div>
+          <div class="step"><span class="n">4</span> (Alt) estimate shop-weeks × labor markup</div>
+          <div class="step"><span class="n">5</span> Pass numbers to Jenna to format</div>
+        </div>
+        <div class="notes">Brandon quotes three $300K jobs in the time a calculator user would over-engineer one. <b>Not a near-term automation target.</b> Historical data (top-line + bottom-line per job) exists in master expense sheet — future training data.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">1.04</span>
+          <h3 class="proc-title">Small Quoting (&lt;$50K) + Print Quoting</h3>
+          <span class="owner j">J</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Review scope</div>
+          <div class="step"><span class="n">2</span> Build quote (systematic / calculable)</div>
+          <div class="step"><span class="n">3</span> Pass to Brandon for green-light</div>
+        </div>
+        <div class="notes">Print quoting is calculable and rule-based (unlike experiential fab). Strong automation candidate.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">1.05</span>
+          <h3 class="proc-title">Estimate Formatting & Send</h3>
+          <span class="owner j">J</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Receive final numbers from Brandon</div>
+          <div class="step manual"><span class="n">2</span> Format estimate in QuickBooks <span class="flag-inline">manual</span></div>
+          <div class="step"><span class="n">3</span> Send estimate to client</div>
+          <div class="step"><span class="n">4</span> Client approves & signs → kicks off onboarding</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== GROUP 2: ONBOARDING → PROJECT EXECUTION ==================== -->
+  <section class="group del open">
+    <div class="group-head" onclick="this.parentNode.classList.toggle('open')">
+      <h2><span class="bar"></span> Onboarding → Project Execution <span class="tag">Signed invoice → Install complete</span></h2>
+      <span class="caret">▾</span>
+    </div>
+    <div class="group-body">
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.01</span>
+          <h3 class="proc-title">Invoice Onboarding</h3>
+          <span class="owner j">J</span>
+          <span class="severity">Top pain point</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Client approves & signs invoice</div>
+          <div class="step redundant"><span class="n">2</span> Enter job into RE Grid <span class="flag-inline">1st entry</span></div>
+          <div class="step redundant"><span class="n">3</span> Copy print items to Printavo <span class="flag-inline">2nd entry</span></div>
+          <div class="step redundant"><span class="n">4</span> Create Dropbox folder structure <span class="flag-inline">3rd entry</span></div>
+          <div class="step redundant"><span class="n">5</span> Create CompanyCam project <span class="flag-inline">4th entry</span></div>
+          <div class="step redundant"><span class="n">6</span> Enter into expense sheet <span class="flag-inline">5th entry</span></div>
+          <div class="step redundant"><span class="n">7</span> Create Google Calendar event (8 fields) <span class="flag-inline">6th entry</span></div>
+          <div class="step redundant"><span class="n">8</span> Various email references <span class="flag-inline">7–8th</span></div>
+          <div class="step manual"><span class="n">9</span> Attach wire-transfer PDF (if applicable) <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">10</span> Send client logistics form <span class="flag-inline">manual</span></div>
+        </div>
+        <div class="notes">
+          <b class="hot">Same job name + number is copy-pasted 7–8 times per signed invoice.</b> Google Calendar event alone carries 8 handtyped fields (job name, address, on-site contact, warehouse call time, on-site arrival, crew names+phones, vehicle, dress code). Jenna's #1 "give to an assistant tomorrow" task.
+          <br/><b>Already partially solved:</b> AutoMates n8n flow fires 7 parallel tasks from a single Monday.com trigger → review time dropped from 30 min to ~2 min.
+        </div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.02</span>
+          <h3 class="proc-title">Client Logistics Form Follow-Up</h3>
+          <span class="owner j">J</span>
+        </div>
+        <div class="steps">
+          <div class="step manual"><span class="n">1</span> Remember which jobs have open forms <span class="flag-inline">memory only</span></div>
+          <div class="step manual"><span class="n">2</span> Manually check email for replies <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">3</span> Send follow-up (email or call) <span class="flag-inline">no template</span></div>
+          <div class="step manual"><span class="n">4</span> No system records form received <span class="flag-inline">gap</span></div>
+        </div>
+        <div class="notes">Jenna's #2 "would immediately hand off" task. Purely reactive, no reminders, no status field anywhere — relies on Jenna's memory.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.03</span>
+          <h3 class="proc-title">Budget Pull for Modeling</h3>
+          <span class="owner t">T</span>
+          <span class="severity">80% of jobs blocked here</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Receive client brief</div>
+          <div class="step block"><span class="n">2</span> Tavian has no QuickBooks access <span class="flag-inline">blocked</span></div>
+          <div class="step manual"><span class="n">3</span> Chase Brandon or Jenna for quote <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">4</span> Calculate budget = quote × 0.25 <span class="flag-inline">manual</span></div>
+          <div class="step redundant"><span class="n">5</span> Write budget on quote printout <span class="flag-inline">1st place</span></div>
+          <div class="step redundant"><span class="n">6</span> Also write on whiteboard <span class="flag-inline">2nd place</span></div>
+          <div class="step"><span class="n">7</span> Proceed to modeling (or proceed blind if quote missing)</div>
+        </div>
+        <div class="notes"><b class="hot">80% of the time the quote either doesn't exist yet, was created after-the-fact, or doesn't meet standards.</b> Either automated QB-quote notification to Tavian or read-only access closes this.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.04</span>
+          <h3 class="proc-title">3D Modeling</h3>
+          <span class="owner t">T</span>
+          <span class="severity">Tavian's #1 time sink</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Review client render / dimensions</div>
+          <div class="step manual"><span class="n">2</span> Build Rhino model from scratch <span class="flag-inline">626 min / 3 days</span></div>
+          <div class="step"><span class="n">3</span> Include structural detail (bolts, slots, LED channels, engravings)</div>
+        </div>
+        <div class="notes"><b>No parametric reuse across jobs.</b> Every build modeled from scratch even when structure repeats. Grasshopper (Rhino plugin) is available but rarely used for parametric geometry — opportunity.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.05</span>
+          <h3 class="proc-title">Machine File Creation</h3>
+          <span class="owner t">T</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Import Rhino → Fusion</div>
+          <div class="step"><span class="n">2</span> Select pieces by material + thickness</div>
+          <div class="step"><span class="n">3</span> Assign nests, generate cutting report</div>
+          <div class="step"><span class="n">4</span> Create CNC tool paths (pocket / contour / finish)</div>
+          <div class="step"><span class="n">5</span> Simulate to verify paths</div>
+          <div class="step"><span class="n">6</span> Print 4×1″ sticker labels per piece</div>
+          <div class="step"><span class="n">7</span> Upload files to Dropbox</div>
+          <div class="step manual"><span class="n">8</span> Text CNC operator with file-location screenshot <span class="flag-inline">manual</span></div>
+        </div>
+        <div class="notes">147 min / 3 days — most efficient block because Tavian pre-built templates. Manual operator notification could route via Monday.com or SMS trigger.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.06</span>
+          <h3 class="proc-title">Shop Drawing Production</h3>
+          <span class="owner t">T</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Export vectors Rhino → Illustrator</div>
+          <div class="step manual"><span class="n">2</span> Apply line weights, colors, swatches <span class="flag-inline">253 min / 3 days</span></div>
+          <div class="step manual"><span class="n">3</span> Add assembly diagrams + real hardware photos <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">4</span> Add multilingual notes (UA / ES crew) <span class="flag-inline">manual</span></div>
+          <div class="step"><span class="n">5</span> Export PDF from Illustrator</div>
+          <div class="step"><span class="n">6</span> Save PDF to Dropbox</div>
+          <div class="step redundant"><span class="n">7</span> Paste Dropbox link into RE Grid <span class="flag-inline">double-logged</span></div>
+          <div class="step manual"><span class="n">8</span> Print physical copy for shop <span class="flag-inline">paper</span></div>
+        </div>
+        <div class="notes">Illustrator used because Fusion's drawing workspace can't do exploded views, color swatches, or hardware reference images.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.07</span>
+          <h3 class="proc-title">Drawing Version Management</h3>
+          <span class="owner t">T</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Export updated drawing PDF</div>
+          <div class="step manual"><span class="n">2</span> Save vN to Dropbox, move prior to /Old <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">3</span> No changelog generated <span class="flag-inline">gap</span></div>
+          <div class="step manual"><span class="n">4</span> Text / email PM manually re: update <span class="flag-inline">manual notify</span></div>
+        </div>
+        <div class="notes">Clients routinely reference stale PDFs from long email chains. Tavian's stated fix: Monday.com auto-ping PM on new version, PM gets check/X approval, decline sends notes back to Tavian.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.08</span>
+          <h3 class="proc-title">Rhino ↔ Fusion Sync (edit loop)</h3>
+          <span class="owner t">T</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Edit surface / geometry in Rhino</div>
+          <div class="step manual"><span class="n">2</span> Re-import to Fusion — no live link <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">3</span> Re-run nests + tool paths <span class="flag-inline">manual</span></div>
+        </div>
+        <div class="notes">Explore Fusion API + Rhino/Grasshopper for live link.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.09</span>
+          <h3 class="proc-title">Print Department Production</h3>
+          <span class="owner j">J</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Receive client artwork files</div>
+          <div class="step"><span class="n">2</span> Set up approval pages for client</div>
+          <div class="step"><span class="n">3</span> Configure artwork for production</div>
+          <div class="step"><span class="n">4</span> Run print machines (Nancy primary, Jenna overflow)</div>
+          <div class="step manual"><span class="n">5</span> Track print hours in Google Sheet <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">6</span> Close job & total hours manually <span class="flag-inline">manual calc</span></div>
+          <div class="step redundant"><span class="n">7</span> Enter labor cost into expense sheet <span class="flag-inline">2nd place</span></div>
+        </div>
+        <div class="notes">Print hours live only in the print Google Sheet; have to be totaled and re-typed into the main expense sheet per job.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.10</span>
+          <h3 class="proc-title">Print ↔ Warehouse Label Reconciliation</h3>
+          <span class="owner k">K</span>
+          <span class="owner j">J</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Warehouse needs to verify a print set is complete</div>
+          <div class="step manual"><span class="n">2</span> Printavo labels (e.g. "16×16 DuraMile v4") don't match wall/graphic labels <span class="flag-inline">mismatch</span></div>
+          <div class="step manual"><span class="n">3</span> Keith asks Jenna to look up the mapping <span class="flag-inline">verbal</span></div>
+        </div>
+        <div class="notes">Every print-heavy job triggers a Jenna lookup. Standardize or auto-map Printavo SKU → graphic label.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.11</span>
+          <h3 class="proc-title">Shop Plan & Machine Operations</h3>
+          <span class="owner t">T</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Create daily shop plan for carpenters</div>
+          <div class="step"><span class="n">2</span> Oversee CNC + laser + flatbed machine ops</div>
+          <div class="step block"><span class="n">3</span> Troubleshoot machine issues — SPOF: only Tavian <span class="flag-inline">SPOF</span></div>
+          <div class="step manual"><span class="n">4</span> Distribute paper WIP sheets to crew <span class="flag-inline">paper</span></div>
+          <div class="step"><span class="n">5</span> Mark completed pieces with green cones</div>
+        </div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.12</span>
+          <h3 class="proc-title">Pack List Creation</h3>
+          <span class="owner k">K</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Open build packet / drawings</div>
+          <div class="step manual"><span class="n">2</span> Walk the shop with Tavian <span class="flag-inline">verbal</span></div>
+          <div class="step manual"><span class="n">3</span> Capture custom-vs-standard specs on Post-its <span class="flag-inline">paper</span></div>
+          <div class="step manual"><span class="n">4</span> Cross-check with Brandon / invoice for last-minute adds <span class="flag-inline">verbal</span></div>
+          <div class="step redundant"><span class="n">5</span> Re-enter Post-its into CompanyCam checklist <span class="flag-inline">double-entry</span></div>
+          <div class="step"><span class="n">6</span> Add tools/packouts (A–G), wrap supplies, breakdown wrap list</div>
+          <div class="step manual"><span class="n">7</span> Iterate daily as client adds drift in via other channels <span class="flag-inline">moving target</span></div>
+        </div>
+        <div class="notes">Keith: "Information is all over the place." Sources: Tavian's verbal notes, Post-its, invoice, Dropbox, Brandon calls, client iMessages. No single intake for client adds → often landed in someone's personal text thread.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.13</span>
+          <h3 class="proc-title">Truck Loading</h3>
+          <span class="owner k">K</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Day-of or day-before: warehouse crew pulls items</div>
+          <div class="step"><span class="n">2</span> Each item photo-verified before CompanyCam check-off</div>
+          <div class="step"><span class="n">3</span> Load truck per checklist</div>
+        </div>
+        <div class="notes">Photo-verified loading is the one piece of CompanyCam discipline the team keeps consistently.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.14</span>
+          <h3 class="proc-title">On-Site Install</h3>
+          <span class="owner k">K</span>
+          <span class="owner b">B (travel)</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Field crew arrives on site</div>
+          <div class="step manual"><span class="n">2</span> Works from drawings + pack list (list often only re-read when short) <span class="flag-inline">loose</span></div>
+          <div class="step"><span class="n">3</span> Complete install</div>
+        </div>
+        <div class="notes">Brandon personally leads major out-of-state / travel installs (loads trucks, every call).</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.15</span>
+          <h3 class="proc-title">Breakdown & Return to Warehouse</h3>
+          <span class="owner k">K</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Wrap/save items per breakdown pack list</div>
+          <div class="step"><span class="n">2</span> Load truck for return</div>
+          <div class="step"><span class="n">3</span> Return to warehouse</div>
+          <div class="step"><span class="n">4</span> Tools emptied same day (even if truck left for morning)</div>
+        </div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.16</span>
+          <h3 class="proc-title">Packout (Toolkit) Restock</h3>
+          <span class="owner k">K</span>
+          <span class="severity">Keith's #1 time sink</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Packouts return disorganized, seals broken, tools missing</div>
+          <div class="step block"><span class="n">2</span> Keith restocks + reseals each bin manually <span class="flag-inline">~2 hrs / cycle</span></div>
+          <div class="step"><span class="n">3</span> Apply green zip tie (physical "ready" signal)</div>
+        </div>
+        <div class="notes"><b>Proposed fix (endorsed by Keith on the call):</b> require CompanyCam drawer-level photo verification on every packout return before it's signed in. Shifts accountability to returning crew, eliminates the 2-hour cycle.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.17</span>
+          <h3 class="proc-title">Client Email Communication During Build</h3>
+          <span class="owner t">T</span>
+          <span class="severity">Should route through PM</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Client sends fabrication question to Tavian</div>
+          <div class="step manual"><span class="n">2</span> Tavian context-switches out of deep work <span class="flag-inline">85+ email chains</span></div>
+          <div class="step manual"><span class="n">3</span> Tavian replies with fabrication detail directly <span class="flag-inline">manual</span></div>
+        </div>
+        <div class="notes">Tavian's stated preference: he provides info, PM/Jenna handles all client-facing send. Current setup interrupts modeling/drawing work constantly.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">2.18</span>
+          <h3 class="proc-title">Client Approvals & Change Orders</h3>
+          <span class="owner j">J</span>
+          <span class="owner t">T</span>
+          <span class="owner b">B</span>
+          <span class="severity">Unowned lifecycle</span>
+        </div>
+        <div class="steps">
+          <div class="step manual"><span class="n">1</span> Client references old PDF in long email thread <span class="flag-inline">version confusion</span></div>
+          <div class="step manual"><span class="n">2</span> Add-ons come in via email, text, or phone call <span class="flag-inline">4+ channels</span></div>
+          <div class="step manual"><span class="n">3</span> No single "who owns this?" <span class="flag-inline">gap</span></div>
+          <div class="step manual"><span class="n">4</span> May or may not reach pack list / invoice <span class="flag-inline">propagation failure</span></div>
+          <div class="step block"><span class="n">5</span> $10K add-on approved over text has no home in any system <span class="flag-inline">lost</span></div>
+        </div>
+        <div class="notes"><b>Brandon's vision:</b> client portal with separate shop drawing vs. graphic/print approval tabs, current version prominent, archived versions behind PIN/warning, all job details auto-populated. Comms stay in email/text but portal captures approvals for paper trail.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== GROUP 3: INTERNAL PROCESSES ==================== -->
+  <section class="group int open">
+    <div class="group-head" onclick="this.parentNode.classList.toggle('open')">
+      <h2><span class="bar"></span> Internal Processes <span class="tag">Running the business</span></h2>
+      <span class="caret">▾</span>
+    </div>
+    <div class="group-body">
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.01</span>
+          <h3 class="proc-title">Shared Inbox Triage</h3>
+          <span class="owner j">J</span>
+        </div>
+        <div class="steps">
+          <div class="step manual"><span class="n">1</span> Monitor shared Create@ inbox + personal inbox <span class="flag-inline">15+ tabs</span></div>
+          <div class="step manual"><span class="n">2</span> Handle client comm threads <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">3</span> Handle vendor threads — print, builds <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">4</span> Respond to payment inquiries — no templates <span class="flag-inline">no template</span></div>
+          <div class="step block"><span class="n">5</span> Track context across email / phone / Zoom / text <span class="flag-inline">context lost</span></div>
+        </div>
+        <div class="notes">Jenna is on virtually every email thread. Her #3 "give to an assistant": email drafting + summarization, especially templated payment/follow-up responses.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.02</span>
+          <h3 class="proc-title">Internal Communication (cross-channel)</h3>
+          <span class="owner j">J</span>
+          <span class="owner k">K</span>
+          <span class="owner t">T</span>
+          <span class="owner b">B</span>
+        </div>
+        <div class="steps">
+          <div class="step manual"><span class="n">1</span> Email, personal text, iMessage, Gmail, phone calls <span class="flag-inline">fragmented</span></div>
+          <div class="step manual"><span class="n">2</span> SendBlue (paid) abandoned — attachment / contact issues <span class="flag-inline">tool fail</span></div>
+          <div class="step manual"><span class="n">3</span> Personal group texts are the de-facto task board <span class="flag-inline">no record</span></div>
+          <div class="step block"><span class="n">4</span> Context lost when thread jumps channel <span class="flag-inline">loss</span></div>
+        </div>
+        <div class="notes"><b>Braindump note:</b> Slack (mobile-friendly, centralized) worth re-evaluating for internal comms. SendBlue may be reconfigurable or replaceable.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.03</span>
+          <h3 class="proc-title">Warehouse Task Delegation</h3>
+          <span class="owner k">K</span>
+        </div>
+        <div class="steps">
+          <div class="step manual"><span class="n">1</span> Walk warehouse each morning <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">2</span> Photograph tasks (flats to paint, carts to stow, items to wrap) <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">3</span> Text photo + instruction to each crew member individually <span class="flag-inline">1:1 manual</span></div>
+          <div class="step"><span class="n">4</span> Crew "likes" photo when task done — informal completion log</div>
+          <div class="step block"><span class="n">5</span> Delegation stalls when Keith is on-site elsewhere <span class="flag-inline">SPOF</span></div>
+        </div>
+        <div class="notes">Keith's stated biggest time leak. Opportunity: weekly warehouse task plan crew can self-serve from, with ad-hoc additions layered on top — survives Keith traveling.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.04</span>
+          <h3 class="proc-title">Two-Bin Setup & Reorder</h3>
+          <span class="owner k">K</span>
+        </div>
+        <div class="steps">
+          <div class="step manual"><span class="n">1</span> New item setup: duplicate Google Form template <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">2</span> Pull SKU from Home Depot / Uline, measure item, spec box <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">3</span> Get red/green box fabricated + painted, deploy QR <span class="flag-inline">queue</span></div>
+          <div class="step"><span class="n">4</span> In-use: bin flips from green to red (empty)</div>
+          <div class="step manual"><span class="n">5</span> Worker scans QR → Google Form → email purchaser <span class="flag-inline">often skipped</span></div>
+          <div class="step manual"><span class="n">6</span> Keith reorders anything that's red <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">7</span> Sheet goods (plywood, MDF) have target stock levels but no automated tracking <span class="flag-inline">reactive</span></div>
+        </div>
+        <div class="notes">Scan gets skipped when crews rush to load a truck. Backlog of ~6 items waiting on physical box builds. <b>Brandon's dream fix:</b> security camera + AI watching the consumables aisle — when a bin stays red 5+ min, send Keith a screenshot. Human-in-the-loop alert, no auto-order.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.05</span>
+          <h3 class="proc-title">Installer / Crew Scheduling</h3>
+          <span class="owner j">J</span>
+          <span class="owner k">K (co-own)</span>
+        </div>
+        <div class="steps">
+          <div class="step manual"><span class="n">1</span> Jenna/Keith assign installers to jobs in shared Google Calendar <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">2</span> Gusto PTO syncs to calendar as yellow events (to dodge conflicts) <span class="flag-inline">partial integration</span></div>
+          <div class="step manual"><span class="n">3</span> Calendar event carries 8 fields per install (crew names + phones, vehicle, dress code, etc.) <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">4</span> Schedule lives only in Google Calendar — not linked to project record <span class="flag-inline">siloed</span></div>
+          <div class="step block"><span class="n">5</span> Crew finds out via text / verbal handoff <span class="flag-inline">no central view</span></div>
+        </div>
+        <div class="notes"><b>Direction:</b> consolidate into Monday.com — installer assignments become a field on the project record, with calendar as a view on top. Removes the duplicate data entry of crew info at onboarding vs. scheduling time.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.06</span>
+          <h3 class="proc-title">Expense Tracking & Job-Cost Attribution</h3>
+          <span class="owner j">J</span>
+          <span class="owner t">T</span>
+        </div>
+        <div class="steps">
+          <div class="step redundant"><span class="n">1</span> Pull invoice details from QuickBooks OR email <span class="flag-inline">2 sources</span></div>
+          <div class="step redundant"><span class="n">2</span> Enter into RE Grid <span class="flag-inline">dup</span></div>
+          <div class="step redundant"><span class="n">3</span> Enter into Printavo <span class="flag-inline">dup</span></div>
+          <div class="step redundant"><span class="n">4</span> Enter into expense sheet <span class="flag-inline">dup</span></div>
+          <div class="step redundant"><span class="n">5</span> Update Dropbox folder structure <span class="flag-inline">dup</span></div>
+          <div class="step manual"><span class="n">6</span> Total print hours from Google Sheet <span class="flag-inline">manual calc</span></div>
+          <div class="step manual"><span class="n">7</span> Enter labor cost into expense sheet <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">8</span> Tag AMEX line items to specific job (single $6K order may split across 2 jobs) <span class="flag-inline">manual</span></div>
+        </div>
+        <div class="notes"><b>Brandon's ask:</b> pull all AMEX transactions into one place where each line can be dropdown-tagged to a job. Hello Frank tested (great UI, no per-job tagging). Ashore abandoned — required double-entry.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.07</span>
+          <h3 class="proc-title">Shop Expense & KPI Tracking</h3>
+          <span class="owner t">T</span>
+        </div>
+        <div class="steps">
+          <div class="step manual"><span class="n">1</span> Collect paper WIP sheets from crew <span class="flag-inline">paper</span></div>
+          <div class="step manual"><span class="n">2</span> Sum labor hours, × rate <span class="flag-inline">manual calc</span></div>
+          <div class="step manual"><span class="n">3</span> Pull material usage from Fusion nests <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">4</span> Enter all costs in Expense Sheet <span class="flag-inline">manual</span></div>
+          <div class="step"><span class="n">5</span> Roll up to Q1 / Q2 master sheet</div>
+          <div class="step manual"><span class="n">6</span> Update KPI sheet manually <span class="flag-inline">manual</span></div>
+        </div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.08</span>
+          <h3 class="proc-title">Monday.com & Time Tracking (today)</h3>
+          <span class="owner t">T</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Monday.com board built by Tavian — <b>not in daily use</b></div>
+          <div class="step manual"><span class="n">2</span> Crew logs WIP on physical paper sheets instead <span class="flag-inline">paper</span></div>
+          <div class="step manual"><span class="n">3</span> Tavian manually aggregates hours <span class="flag-inline">manual</span></div>
+          <div class="step redundant"><span class="n">4</span> Enters into expense Google Sheet <span class="flag-inline">dup</span></div>
+        </div>
+        <div class="notes"><b>Braindump direction:</b> Monday.com becomes the single source of truth — pipeline, onboarding trigger, project tracking, task delegation, client comms log (Gmail sync + SendBlue/text if solvable). Shop iPads with Monday time-tracking feed budget + KPI sheets automatically.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.09</span>
+          <h3 class="proc-title">Payroll Oversight</h3>
+          <span class="owner j">J</span>
+          <span class="owner t">T</span>
+          <span class="owner b">B (signoff)</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Employees clock in/out via Gusto iPad</div>
+          <div class="step manual"><span class="n">2</span> Jenna/Tavian review timesheets for accuracy <span class="flag-inline">manual audit</span></div>
+          <div class="step manual"><span class="n">3</span> Check missed breaks + accidental 24-hr shifts <span class="flag-inline">error-prone</span></div>
+          <div class="step manual"><span class="n">4</span> Verify OT + out-of-state travel rates correct <span class="flag-inline">manual</span></div>
+          <div class="step"><span class="n">5</span> Submit to Brandon for final approval</div>
+          <div class="step"><span class="n">6</span> Approve payroll in Gusto</div>
+        </div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.10</span>
+          <h3 class="proc-title">Job Status Tracking</h3>
+          <span class="owner j">J</span>
+        </div>
+        <div class="steps">
+          <div class="step manual"><span class="n">1</span> Monitor RE Grid + Printavo — status fields often unfilled <span class="flag-inline">stale</span></div>
+          <div class="step block"><span class="n">2</span> Fall back to verbal check-ins on progress <span class="flag-inline">SPOF</span></div>
+          <div class="step manual"><span class="n">3</span> Re-read email threads for context after any absence <span class="flag-inline">hrs / absence</span></div>
+          <div class="step"><span class="n">4</span> Flag at-risk jobs</div>
+          <div class="step"><span class="n">5</span> Attend Tue/Thu leadership meeting</div>
+        </div>
+        <div class="notes">"With no consolidated view of project status, returning from even a single day off can mean hours of re-reading email chains."</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.11</span>
+          <h3 class="proc-title">Weekly Hot Sheet</h3>
+          <span class="owner j">J</span>
+          <span class="owner b">+ John (excluded)</span>
+        </div>
+        <div class="steps">
+          <div class="step manual"><span class="n">1</span> Jenna contributes job status + pipeline info <span class="flag-inline">stale data</span></div>
+          <div class="step"><span class="n">2</span> John compiles Hot Sheet</div>
+          <div class="step"><span class="n">3</span> Sent by email + displayed on office TVs</div>
+        </div>
+        <div class="notes">Jenna flagged this as a candidate for automation / enrichment.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.12</span>
+          <h3 class="proc-title">Tue/Thu Leadership Meeting</h3>
+          <span class="owner b">B</span>
+          <span class="owner j">J</span>
+          <span class="owner k">K</span>
+          <span class="owner t">T</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Review upcoming jobs</div>
+          <div class="step"><span class="n">2</span> Quick pipeline look</div>
+          <div class="step"><span class="n">3</span> Review recently completed jobs vs. expense sheet</div>
+        </div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.13</span>
+          <h3 class="proc-title">Machine Knowledge Dependency</h3>
+          <span class="owner t">T</span>
+          <span class="severity">Critical SPOF</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Machine issue reported (CNC, laser, Colex flatbed, 3D printer)</div>
+          <div class="step block"><span class="n">2</span> Only Tavian can diagnose + fix <span class="flag-inline">SPOF</span></div>
+          <div class="step block"><span class="n">3</span> Tavian pulled from modeling / drawing work <span class="flag-inline">interrupt</span></div>
+          <div class="step"><span class="n">4</span> Troubleshoot & resolve alone</div>
+        </div>
+        <div class="notes">Cross-training + documented machine playbooks are a clear opportunity; otherwise Tavian's drawing time keeps getting eaten.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.14</span>
+          <h3 class="proc-title">Internal Process Knowledge (Jenna)</h3>
+          <span class="owner j">J</span>
+          <span class="severity">Critical SPOF</span>
+        </div>
+        <div class="steps">
+          <div class="step block"><span class="n">1</span> How to update / correct an invoice in QuickBooks — lives in Jenna's head <span class="flag-inline">undocumented</span></div>
+          <div class="step block"><span class="n">2</span> Mid-project change-order billing rules — undocumented <span class="flag-inline">undocumented</span></div>
+          <div class="step block"><span class="n">3</span> Expense-sheet tagging conventions + AMEX split rules — undocumented <span class="flag-inline">undocumented</span></div>
+          <div class="step block"><span class="n">4</span> RE Grid / Printavo field-fill conventions — undocumented <span class="flag-inline">undocumented</span></div>
+          <div class="step manual"><span class="n">5</span> Payroll review quirks (breaks, 24-hr errors, OT rules) — undocumented <span class="flag-inline">manual</span></div>
+          <div class="step block"><span class="n">6</span> Trainual covers HR / PTO but not ops process mechanics <span class="flag-inline">gap</span></div>
+        </div>
+        <div class="notes">Scope is <b>internal processes only</b> — how the back office actually runs day-to-day. If Jenna is out even briefly, nobody else knows the mechanics. Tavian flagged this to her in Feb ("write things down before leaving") and it's still a gap. Highest-leverage documentation target.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.15</span>
+          <h3 class="proc-title">Daily Recap / Morning Catch-Up</h3>
+          <span class="owner j">J</span>
+        </div>
+        <div class="steps">
+          <div class="step manual"><span class="n">1</span> Jenna reconstructs overnight context from email + text + calendar <span class="flag-inline">manual</span></div>
+          <div class="step manual"><span class="n">2</span> Cross-reference new client messages vs. active jobs <span class="flag-inline">mental</span></div>
+          <div class="step"><span class="n">3</span> Prioritize the day</div>
+        </div>
+        <div class="notes">Jenna explicitly asked for a morning summary of active projects, upcoming events, and new client messages — even a simple consolidated view would cut mental overhead.</div>
+      </div>
+
+      <div class="proc">
+        <div class="proc-head">
+          <span class="proc-num">3.16</span>
+          <h3 class="proc-title">Business Admin (Brandon)</h3>
+          <span class="owner b">B</span>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span> Insurance, workers comp, general admin</div>
+          <div class="step"><span class="n">2</span> Three legal entities — Events / Products / Warehouse (Wear)</div>
+          <div class="step"><span class="n">3</span> Final payroll sign-off</div>
+          <div class="step"><span class="n">4</span> Joins major out-of-state travel jobs end-to-end</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- REMOVED: Redundancy summary table -->
+  <div style="display:none;">
+    <h3>Redundancy & manual-work heatmap</h3>
+    <p class="sub" style="color:var(--ink-dim); margin-top:0;">The same data or action appears in multiple systems. Every row is a prioritization candidate.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Data / action</th>
+          <th>Lives in</th>
+          <th>Who</th>
+          <th>Trigger</th>
+          <th class="count">Places</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Job name + number</b></td>
+          <td>RE Grid · Printavo · Expense Sheet · Dropbox · CompanyCam · Google Calendar · Gmail refs</td>
+          <td>J</td>
+          <td>Every signed invoice</td>
+          <td class="count">7–8×</td>
+        </tr>
+        <tr>
+          <td><b>Modeling budget (quote × 0.25)</b></td>
+          <td>Whiteboard + printed quote copy</td>
+          <td>T</td>
+          <td>Every build start</td>
+          <td class="count">2×</td>
+        </tr>
+        <tr>
+          <td><b>Drawing PDF link</b></td>
+          <td>Dropbox folder + RE Grid column + email</td>
+          <td>T</td>
+          <td>Every new drawing version</td>
+          <td class="count">3×</td>
+        </tr>
+        <tr>
+          <td><b>Print labor hours</b></td>
+          <td>Print Google Sheet → Expense Sheet</td>
+          <td>J</td>
+          <td>At job close</td>
+          <td class="count">2×</td>
+        </tr>
+        <tr>
+          <td><b>Shop labor hours</b></td>
+          <td>Paper WIP sheet → Expense Google Sheet → KPI Google Sheet</td>
+          <td>T</td>
+          <td>Every job</td>
+          <td class="count">3×</td>
+        </tr>
+        <tr>
+          <td><b>AMEX transaction → job attribution</b></td>
+          <td>AMEX statement → Google Sheet (manually tagged) · Hello Frank test</td>
+          <td>J, B</td>
+          <td>Per charge</td>
+          <td class="count">2–3×</td>
+        </tr>
+        <tr>
+          <td><b>Pack list items</b></td>
+          <td>Tavian's verbal + Post-its → CompanyCam checklist</td>
+          <td>K</td>
+          <td>Every job</td>
+          <td class="count">2×</td>
+        </tr>
+        <tr>
+          <td><b>Print label ↔ graphic label reconciliation</b></td>
+          <td>Printavo SKU ↔ wall/graphic physical label (via Jenna lookup)</td>
+          <td>K, J</td>
+          <td>Every print-heavy job</td>
+          <td class="count">1:1 lookup</td>
+        </tr>
+        <tr>
+          <td><b>CNC operator notification</b></td>
+          <td>Dropbox upload + texted screenshot</td>
+          <td>T</td>
+          <td>Every machine-file drop</td>
+          <td class="count">2×</td>
+        </tr>
+        <tr>
+          <td><b>Client approvals / change orders</b></td>
+          <td>Email chains + texts + phone + occasionally email attachments — no system record</td>
+          <td>All</td>
+          <td>Every change</td>
+          <td class="count">scattered</td>
+        </tr>
+        <tr>
+          <td><b>Client comms (per project)</b></td>
+          <td>Gmail + personal text + phone + Zoom + shared inbox</td>
+          <td>All</td>
+          <td>Ongoing</td>
+          <td class="count">4+ channels</td>
+        </tr>
+        <tr>
+          <td><b>Warehouse task assignments</b></td>
+          <td>Keith's photos + individual texts + iMessage "likes"</td>
+          <td>K</td>
+          <td>Daily</td>
+          <td class="count">1:N manual</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    v1 &nbsp;·&nbsp; Excludes John (Creative &amp; BD) — awaiting interview. Update once scheduled.
+  </div>
+
+</div>
+
+<script>
+  // Allow a hash-based deep link e.g. #proc-2.01 later if we add ids.
+</script>
+
+</body>
+</html>
