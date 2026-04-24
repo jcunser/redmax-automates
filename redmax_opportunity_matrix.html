@@ -207,6 +207,14 @@
               <div class="desc">Resolve the SendBlue issue so SMS-based client and crew comms work reliably. Small footprint, but removes an ongoing annoyance.</div>
             </div>
           </div>
+          <div class="item" draggable="true" data-id="nh-4">
+            <div class="grip">⋮⋮</div>
+            <div class="num">4</div>
+            <div class="body">
+              <div class="title">Vertical AI Assistant — 3D Modeling</div>
+              <div class="desc">Tavian-facing assistant for Rhino + Fusion workflows: parameter suggestions, geometry cleanup, BOM extraction from models, and natural-language CAD tweaks. Narrower audience and heavier build, but pairs naturally with the Fusion ↔ Rhino integration work once design is the bottleneck.</div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -258,6 +266,22 @@
             <div class="body">
               <div class="title">Client Portal — Drawings + Updates Synced with Monday</div>
               <div class="desc">Customer-facing portal showing latest approved drawings, project status, timeline, and key updates. Pulls directly from Monday so there's no double-posting. Kills the email back-and-forth on revisions.</div>
+            </div>
+          </div>
+          <div class="item" draggable="true" data-id="bs-6">
+            <div class="grip">⋮⋮</div>
+            <div class="num">6</div>
+            <div class="body">
+              <div class="title">Inventory Management in Monday.com</div>
+              <div class="desc">Stand up a Monday-based inventory system: item catalog, bin locations, min/max levels, consumption tracking per job, and low-stock alerts tied to PM boards. Solves Keith's "out of screws mid-build" problem immediately — and lays the data foundation the cameras + AI auto-reorder layer plugs into later.</div>
+            </div>
+          </div>
+          <div class="item" draggable="true" data-id="bs-7">
+            <div class="grip">⋮⋮</div>
+            <div class="num">7</div>
+            <div class="body">
+              <div class="title">Vertical AI Assistant — Inventory Ops</div>
+              <div class="desc">Purpose-built assistant sitting on top of the Monday inventory data: natural-language stock lookups ("how many 1/4\" screws left?"), reorder drafts, vendor matching, and per-job burn-rate forecasting. Becomes the conversational layer over inventory + purchasing once the camera system is live.</div>
             </div>
           </div>
         </div>
@@ -327,6 +351,14 @@
               <div class="desc">Automated morning brief for Jenna + Brandon: today's priorities, this week's deliverables, flagged risks, meetings, open approvals. Pulls from Monday, Calendar, and Slack. Replaces the mental-load check-in that starts every morning.</div>
             </div>
           </div>
+          <div class="item" draggable="true" data-id="qw-6">
+            <div class="grip">⋮⋮</div>
+            <div class="num">6</div>
+            <div class="body">
+              <div class="title">Vertical AI Assistant — Email + Calendar</div>
+              <div class="desc">Dedicated assistant for Brandon + Jenna's inbox and calendar: triage inbound, draft replies in their voice, surface follow-ups, auto-schedule around focus blocks, and feed the day-ahead brief. Ships fast on top of existing AI tooling — biggest immediate mental-load relief before the deeper Monday buildouts land.</div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -345,7 +377,7 @@
 
 <script>
 (function(){
-  const STORAGE_KEY = 'redmax_opportunity_matrix_v2';
+  const STORAGE_KEY = 'redmax_opportunity_matrix_v3';
   const quads = document.querySelectorAll('.quad');
   const toast = document.getElementById('toast');
 
